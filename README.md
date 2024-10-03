@@ -56,24 +56,24 @@ If this plugin couldn't find any heading in the web page, it stopped building th
 
 ### content
 
-Is a string selector where the plugin will look for headings. Defaults to ***"body"***.
+Is a string selector where the plugin will look for headings. Defaults to **"body"**.
 
 ### headings
 
-Is a string with a comma-separated list of selectors to be used as headings, ordered by their relative hierarchy level. Defaults to ***"h1,h2,h3"***.
+Is a string with a comma-separated list of selectors to be used as headings, ordered by their relative hierarchy level. Defaults to **"h1,h2,h3"**.
 
 ### excludeHref
 
-This prevent changing url after click on created list item. Defaults to ***false***.
+This prevent changing url after click on created list item. Defaults to **false**.
 
 ### scroll
 
-The ***"active"*** class set to list item that is currently in focus when scroll. Defaults to ***false***.
+The **"active"** class set to list item that is currently in focus when scroll. Defaults to **false**.
 
 ### scrollOffset
 
-This work when `scroll` option is true. It define the offset to trigger the next heading in pixels. Defaults to ***150***.
+This work when `scroll` option is true. It define the offset to trigger the next heading in pixels. Defaults to **150**.
 
 ### smoothScroll
 
-Enable or disable smooth scrolling after click on created list item. Defaults to ***false***.
+Enable or disable smooth scrolling after click on created list item. Defaults to **false**.
