@@ -25,11 +25,11 @@
       window.addEventListener("scroll", () => {
         let nowScrollTop = window.scrollY;
 
-        headings.forEach((item) => {
+        headings.forEach((heading) => {
           if (nowScrollTop > lastScrollTop) {
             // Add title to visibleHeadings if it's topOffset is less than scrollOffset.
-            +item.getBoundingClientRect().top <= +scrollOffset &&
-              visibleHeadings.push(item);
+            +heading.getBoundingClientRect().top <= +scrollOffset &&
+              visibleHeadings.push(heading);
           } else {
             // Remove title from visibleHeadings if it's topOffset is more than scrollOffset.
             visibleHeadings.length &&
@@ -58,8 +58,8 @@
         root.querySelectorAll("li a").forEach((item) => {
           const itemHref = item.dataset.href || decodeURIComponent(item.href);
 
-          // Check visible title if it exists, then add class to list item that matches with
-          // visible title and remove class from others.
+          // Check visible title if it exists, then add class to table of contents item that matches
+          // with visible title and remove class from others.
           activeHeading && itemHref.endsWith(activeHeading.id)
             ? item.parentElement.classList.add("active")
             : item.parentElement.classList.remove("active");
@@ -67,24 +67,62 @@
       });
     };
 
+    const schemaHandler = (schema, headings) => {
+      if (schema !== true) return;
+
+      const schemaScriptTag = document.createElement("script");
+      const schemajson = {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: document.title,
+        description: document.querySelector('meta[name="description"]').content,
+        mainEntity: {
+          "@type": "ItemList",
+          name: "Table of Contents",
+          itemListElement: [],
+        },
+      };
+
+      schemaScriptTag.type = "application/ld+json";
+      schemaScriptTag.id = "table-of-contents-schema";
+
+      // Create schema listItem.
+      headings.forEach((heading, index) => {
+        schemajson.mainEntity.itemListElement.push({
+          "@type": "ListItem",
+          position: index + 1,
+          item: {
+            "@type": "WebPageElement",
+            name: heading.textContent,
+            url: `${window.location.origin}${window.location.pathname}#${heading.id}`,
+          },
+        });
+      });
+
+      schemaScriptTag.innerHTML = JSON.stringify(schemajson);
+
+      // Append schema script tag to head of the web page.
+      document.head.appendChild(schemaScriptTag);
+    };
+
     const tocHandler = (options) => {
-      let { headings, excludeHref, scroll, scrollOffset, smoothScroll } =
-        options;
+      let {
+        headings,
+        excludeHref,
+        scroll,
+        scrollOffset,
+        smoothScroll,
+        schema,
+      } = options;
       let tocList = "";
       let curLevel = +headings[0].outerHTML.match(/<h([\d]).*>/)[1];
-      let listTag = root.tagName;
-
-      // convert type of these options to boolean.
-      excludeHref = !!excludeHref;
-      scroll = !!scroll;
-      smoothScroll = !!smoothScroll;
 
       // Generate unique IDs for headings. Spaces are replaced with underscores. if the ID already
       // exists, a suffix like "_01", "_02", etc. add to headings IDs to get a nuique ID.
-      headings.forEach((item) => {
+      headings.forEach((heading) => {
         const generateUniqueId = () => {
-          let text = item.textContent || "?";
-          let baseId = item.id ? item.id : text.replace(/\s+/g, "_");
+          let text = heading.textContent || "?";
+          let baseId = heading.id || text.replace(/\s+/g, "_");
           let count = 1;
           let suffix = "";
 
@@ -96,42 +134,42 @@
           return baseId + suffix;
         };
 
-        item.setAttribute("id", generateUniqueId());
+        heading.setAttribute("id", generateUniqueId());
       });
 
       // Build table of contents.
-      headings.forEach((item) => {
-        const level = +item.outerHTML.match(/<h([\d]).*>/)[1];
+      headings.forEach((heading) => {
+        const level = +heading.outerHTML.match(/<h([\d]).*>/)[1];
         const hrefHandler = () => {
           return excludeHref !== true
-            ? `href="#${item.id}"`
-            : `href="#" data-href="${item.id}"`;
+            ? `href="#${heading.id}"`
+            : `href="#" data-href="${heading.id}"`;
         };
 
         if (level > curLevel) {
           // If the heading is at a deeper level than where we are, we open a new nested list.
           tocList += new Array(level - curLevel + 1).join(
-            `<${listTag} data-level="${level}">`
+            `<ul data-level="${level}">`
           );
         }
 
         if (level < curLevel) {
           // If the heading is at a shallower level than where we are, we close the list that we opened.
-          tocList += new Array(curLevel - level + 1).join(`</${listTag}>`);
+          tocList += new Array(curLevel - level + 1).join("</ul>");
         }
 
         curLevel = +level;
 
-        // Create the list item.
-        tocList += `<li><a ${hrefHandler()}>${item.textContent}</a></li>`;
+        // Create table of contents item.
+        tocList += `<li><a ${hrefHandler()}>${heading.textContent}</a></li>`;
       });
 
       // Append table of contents to the selector.
       root.innerHTML = tocList;
 
-      root.querySelectorAll(`${listTag}`).forEach((list) => {
+      root.querySelectorAll("ul").forEach((list) => {
         // Remove duplicate lists that created when we create table of contents. these lists have no
-        // list item, so we remove them.
+        // item, so we remove them.
         if (+list.parentElement.dataset.level === +list.dataset.level) {
           list.parentElement.innerHTML = list.innerHTML;
         }
@@ -144,9 +182,7 @@
         list.removeAttribute("data-level");
       });
 
-      scrollHandler(headings, scroll, scrollOffset);
-
-      // Handle smoothScrolling and changing url when click on list item.
+      // Handle smoothScrolling and changing url when click on table of contents item.
       root.querySelectorAll("li a").forEach((item) => {
         item.addEventListener("click", (e) => {
           e.preventDefault();
@@ -170,24 +206,26 @@
             }, delay); // Set delay for update locaion hash if smoothScroll option is true.
         });
       });
+
+      schemaHandler(schema, headings);
+      scrollHandler(headings, scroll, scrollOffset);
     };
 
-    let { content, headings } = options ? options : {};
+    let { content, headings } = options || {};
 
-    // Set default value for options when they don't exist.
-    if (!content) content = "body";
-    if (!headings) headings = "h1,h2,h3";
-
-    // Set content default value if it's undefined or null.
+    // Set default value for options.
     let article = document.querySelector(`${content}`) || document.body;
-    let heading = article.querySelectorAll(`${headings}`);
+    let heading = article.querySelectorAll(`${headings || "h1,h2,h3"}`);
 
     // Stop building table of contents, if no heading were found.
     if (!heading.length) {
       console.log(
         "Unfortunately, we couldn't find any heading, so we stopped building the toc."
       );
-      return delete e.toc;
+
+      delete e.toc;
+      
+      return;
     }
 
     tocHandler({ ...options, headings: heading });
@@ -195,35 +233,21 @@
     delete e.toc;
   };
 
-  // Data Attributes.
+  // Build table of contents with Data Attributes.
   (function () {
     const tocEle = document.querySelector("[data-toc]");
 
     if (!tocEle) return;
 
-    const {
-      toc: content,
-      tocHeadings: headings,
-      tocExcludehref: excludeHref,
-      tocScroll: scroll,
-      tocScrolloffset: scrollOffset,
-      tocSmoothscroll: smoothScroll,
-    } = tocEle.dataset;
+    let options = null;
 
-    // Delete selector datasets after store them. It doesn't affect the main datasets that you've defined.
-    for (let i in tocEle.dataset) {
-      delete tocEle.dataset[i];
-    }
+    try {
+      // Convert tocEle dataset to an object if dataset exist.
+      options = JSON.parse(tocEle.dataset.toc.replace(/(\w+):/g, '"$1":'));
+    } catch (err) {}
 
-    window.onload = () => {
-      tocEle.toc({
-        content,
-        headings,
-        excludeHref,
-        scroll,
-        scrollOffset,
-        smoothScroll,
-      });
-    };
+    delete tocEle.dataset.toc;
+
+    window.addEventListener("DOMContentLoaded", () => tocEle.toc(options));
   })();
 })(HTMLElement.prototype);

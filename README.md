@@ -17,7 +17,7 @@ Example without options:
 Example with options:
 
 ```html
-<ul data-toc="div.content" data-toc-headings="h2,h3,h4" data-toc-excludeHref="true"></ul>
+<ul data-toc='{ content: "div.content", headings: "h2,h3,h4", schema: true }'></ul>
 ```
 
 ### Via JavaScript code
@@ -28,9 +28,9 @@ Example without options:
 <ul id="toc-list"></ul>
 ...
 <script>
-    window.onload = () => {
+    window.addEventListener("DOMContentLoaded", () => {
         document.querySelector("#toc-list").toc();
-    };
+    });
 </script>
 ```
 
@@ -40,15 +40,13 @@ Example with options:
 <ul id="toc-list"></ul>
 ...
 <script>
-    window.onload = () => {
-        document.querySelector("#toc-list").toc({ content: "div.content", headings: "h2,h3,h4", excludeHref: true });
-    };
+    window.addEventListener("DOMContentLoaded", () => {
+        document.querySelector("#toc-list").toc({ content: "div.content", headings: "h2,h3,h4", schema: true });
+    });
 </script>
 ```
 
 **Note:**
-
-This plugin creates nested lists of the same element type that is called. For example, if you call the "ul" element, the nested list created will be the "ul" element.
 
 If this plugin couldn't find any heading in the web page, it stopped building the table of contents.
 
@@ -77,3 +75,7 @@ This work when `scroll` option is true. It define the offset to trigger the next
 ### smoothScroll
 
 Enable or disable smooth scrolling after click on created list item. Defaults to **false**.
+
+### schema
+
+Enable or disable creating table of contents schema for the web page that is good for SEO. Defaults to **false**.
