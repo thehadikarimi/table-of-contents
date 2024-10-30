@@ -62,11 +62,11 @@ Is a string with a comma-separated list of selectors to be used as headings, ord
 
 ### excludeHref
 
-This prevent changing url after click on created list item. Defaults to **false**.
+This prevent changing url after click on the created table of contents item. Defaults to **false**.
 
 ### scroll
 
-The **"active"** class set to list item that is currently in focus when scroll. Defaults to **false**.
+When scrolling the **"active"** class is set to the table of contents item, which is currently in focus. Defaults to **false**.
 
 ### scrollOffset
 
@@ -74,8 +74,8 @@ This work when `scroll` option is true. It define the offset to trigger the next
 
 ### smoothScroll
 
-Enable or disable smooth scrolling after click on created list item. Defaults to **false**.
+Enable or disable smooth scrolling after click on the created table of contents item. Defaults to **false**.
 
 ### schema
 
-Enable or disable creating table of contents schema for the web page that is good for SEO. Defaults to **false**.
+Add schema for the created table of contents on the web page, which is useful for SEO. Defaults to **false**.
