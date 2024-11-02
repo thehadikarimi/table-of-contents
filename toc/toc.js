@@ -37,9 +37,7 @@
                 if (+vHeading.getBoundingClientRect().top > +scrollOffset) {
                   const index = visibleHeadings.indexOf(vHeading);
 
-                  if (index > -1) {
-                    visibleHeadings.splice(index, 1);
-                  }
+                  index > -1 && visibleHeadings.splice(index, 1);
                 }
               });
           }
@@ -56,18 +54,18 @@
         const activeHeading = headings[visibleHeadings.length - 1];
 
         root.querySelectorAll("li a").forEach((item) => {
-          const itemHref = item.dataset.href || decodeURIComponent(item.href);
+          const itemHash = decodeURIComponent(item.hash.replace("#", ""));
 
           // Check visible title if it exists, then add class to table of contents item that matches
           // with visible title and remove class from others.
-          activeHeading && itemHref.endsWith(activeHeading.id)
+          activeHeading && itemHash === activeHeading.id
             ? item.parentElement.classList.add("active")
             : item.parentElement.classList.remove("active");
         });
       });
     };
 
-    const schemaHandler = (schema, headings) => {
+    const schemaHandler = (headings, schema) => {
       if (schema !== true) return;
 
       const schemaScriptTag = document.createElement("script");
@@ -140,11 +138,6 @@
       // Build table of contents.
       headings.forEach((heading) => {
         const level = +heading.outerHTML.match(/<h([\d]).*>/)[1];
-        const hrefHandler = () => {
-          return excludeHref !== true
-            ? `href="#${heading.id}"`
-            : `href="#" data-href="${heading.id}"`;
-        };
 
         if (level > curLevel) {
           // If the heading is at a deeper level than where we are, we open a new nested list.
@@ -161,7 +154,7 @@
         curLevel = +level;
 
         // Create table of contents item.
-        tocList += `<li><a ${hrefHandler()}>${heading.textContent}</a></li>`;
+        tocList += `<li><a href="#${heading.id}">${heading.textContent}</a></li>`;
       });
 
       // Append table of contents to the selector.
@@ -188,15 +181,12 @@
           e.preventDefault();
           e.stopPropagation();
 
-          let target =
-            excludeHref === true
-              ? item.dataset.href
-              : decodeURIComponent(item.hash.replace("#", ""));
+          let itemHash = decodeURIComponent(item.hash.replace("#", ""));
           let behavior = smoothScroll === true ? "smooth" : "auto";
           let delay = smoothScroll === true ? 800 : 0;
 
           document
-            .getElementById(target) // Get target heading with table of contents item attribute.
+            .getElementById(itemHash) // Get target heading with table of contents item attribute.
             .scrollIntoView({ behavior }); // Set scrollIntoView behavior according to smoothScroll option.
 
           excludeHref !== true &&
@@ -207,7 +197,7 @@
         });
       });
 
-      schemaHandler(schema, headings);
+      schemaHandler(headings, schema);
       scrollHandler(headings, scroll, scrollOffset);
     };
 
@@ -224,7 +214,7 @@
       );
 
       delete e.toc;
-      
+
       return;
     }
 
