@@ -46,10 +46,6 @@ Example with options:
 </script>
 ```
 
-**Note:**
-
-If this plugin couldn't find any heading in the web page, it stopped building the table of contents.
-
 ## Options
 
 ### content

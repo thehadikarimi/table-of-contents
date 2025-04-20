@@ -1,7 +1,7 @@
 /*!
  * Table of Contents JS Plugin - toc.js
  *
- * developed by Hadi Karimi - https://github.com/karimi-82hadi/table-of-contents
+ * developed by Hadi Karimi - https://github.com/thehadikarimi/table-of-contents
  *
  * A minimal, flexible JS plugin that will creates a table of contents based on the headings of the web page.
  */
@@ -16,8 +16,9 @@
       if (scroll !== true) return;
 
       // Set default value for scrollOffset if it doesn't exist or it is non-numeric.
-      if (+scrollOffset !== 0 && (!scrollOffset || isNaN(scrollOffset)))
+      if (+scrollOffset !== 0 && (!scrollOffset || isNaN(scrollOffset))) {
         scrollOffset = 150;
+      }
 
       let lastScrollTop = 0;
       let visibleHeadings = [];
@@ -36,7 +37,6 @@
               visibleHeadings.forEach((vHeading) => {
                 if (+vHeading.getBoundingClientRect().top > +scrollOffset) {
                   const index = visibleHeadings.indexOf(vHeading);
-
                   index > -1 && visibleHeadings.splice(index, 1);
                 }
               });
@@ -58,9 +58,11 @@
 
           // Check visible title if it exists, then add class to table of contents item that matches
           // with visible title and remove class from others.
-          activeHeading && itemHash === activeHeading.id
-            ? item.parentElement.classList.add("active")
-            : item.parentElement.classList.remove("active");
+          if (activeHeading && itemHash === activeHeading.id) {
+            item.parentElement.classList.add("active");
+          } else {
+            item.parentElement.classList.remove("active");
+          }
         });
       });
     };
@@ -106,25 +108,23 @@
     const tocHandler = (options) => {
       let {
         headings,
+        headingSelectors,
         excludeHref,
         scroll,
         scrollOffset,
         smoothScroll,
         schema,
       } = options;
-      let tocList = "";
-      let curLevel = +headings[0].outerHTML.match(/<h([\d]).*>/)[1];
 
-      // Generate unique IDs for headings. Spaces are replaced with underscores. if the ID already
-      // exists, a suffix like "_01", "_02", etc. add to headings IDs to get a nuique ID.
+      // Generate unique IDs for headings
       headings.forEach((heading) => {
         const generateUniqueId = () => {
           let text = heading.textContent || "?";
-          let baseId = heading.id || text.replace(/\s+/g, "_");
+          let baseId = heading.id || text.trim().replace(/\s+/g, "_");
           let count = 1;
           let suffix = "";
 
-          while (document.getElementById(baseId + suffix) !== null) {
+          while (document.getElementById(baseId + suffix)) {
             suffix = `_${count < 10 ? "0" + count : count}`;
             count++;
           }
@@ -135,65 +135,59 @@
         heading.setAttribute("id", generateUniqueId());
       });
 
-      // Build table of contents.
+      // Stack for managing nesting
+      const stack = [root];
+      const listTag = root.tagName.toLowerCase();
+
+      let currentLevel = 0;
+
       headings.forEach((heading) => {
-        const level = +heading.outerHTML.match(/<h([\d]).*>/)[1];
+        const level = headingSelectors.findIndex((sel) => heading.matches(sel));
 
-        if (level > curLevel) {
-          // If the heading is at a deeper level than where we are, we open a new nested list.
-          tocList += new Array(level - curLevel + 1).join(
-            `<ul data-level="${level}">`
-          );
+        if (level === -1) return;
+
+        // If heading is deeper, create a nested list
+        if (level > currentLevel) {
+          const lastItem = stack[0].lastElementChild;
+
+          if (lastItem) {
+            const newList = document.createElement(listTag);
+            lastItem.appendChild(newList);
+            stack.unshift(newList);
+          }
+        } else if (level < currentLevel) {
+          stack.splice(0, Math.min(currentLevel - level, stack.length - 1));
         }
 
-        if (level < curLevel) {
-          // If the heading is at a shallower level than where we are, we close the list that we opened.
-          tocList += new Array(curLevel - level + 1).join("</ul>");
-        }
+        const liEle = document.createElement("li");
+        const aEle = document.createElement("a");
 
-        curLevel = +level;
+        aEle.textContent = heading.textContent;
+        aEle.href = `#${heading.id}`;
 
-        // Create table of contents item.
-        tocList += `<li><a href="#${heading.id}">${heading.textContent}</a></li>`;
+        liEle.appendChild(aEle);
+        stack[0].appendChild(liEle);
+
+        currentLevel = level;
       });
 
-      // Append table of contents to the selector.
-      root.innerHTML = tocList;
-
-      root.querySelectorAll("ul").forEach((list) => {
-        // Remove duplicate lists that created when we create table of contents. these lists have no
-        // item, so we remove them.
-        if (+list.parentElement.dataset.level === +list.dataset.level) {
-          list.parentElement.innerHTML = list.innerHTML;
-        }
-
-        // Append created list to its previous element.
-        if (list.previousElementSibling) {
-          list.previousElementSibling.appendChild(list);
-        }
-
-        list.removeAttribute("data-level");
-      });
-
-      // Handle smoothScrolling and changing url when click on table of contents item.
+      // Smooth scrolling and optional hash updating
       root.querySelectorAll("li a").forEach((item) => {
         item.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
 
-          let itemHash = decodeURIComponent(item.hash.replace("#", ""));
-          let behavior = smoothScroll === true ? "smooth" : "auto";
-          let delay = smoothScroll === true ? 800 : 0;
+          const itemHash = decodeURIComponent(item.hash.replace("#", ""));
+          const behavior = smoothScroll === true ? "smooth" : "auto";
+          const delay = smoothScroll === true ? 800 : 0;
 
-          document
-            .getElementById(itemHash) // Get target heading with table of contents item attribute.
-            .scrollIntoView({ behavior }); // Set scrollIntoView behavior according to smoothScroll option.
+          document.getElementById(itemHash)?.scrollIntoView({ behavior });
 
-          excludeHref !== true &&
+          if (excludeHref !== true) {
             setTimeout(() => {
-              // Update location hash if excludeHref option is false.
               window.location.hash = item.hash;
-            }, delay); // Set delay for update locaion hash if smoothScroll option is true.
+            }, delay);
+          }
         });
       });
 
@@ -206,19 +200,20 @@
     // Set default value for options.
     let article = document.querySelector(`${content}`) || document.body;
     let heading = article.querySelectorAll(`${headings || "h1,h2,h3"}`);
+    let headingSelectors = (headings || "h1,h2,h3")
+      .split(",")
+      .map((h) => h.trim());
 
     // Stop building table of contents, if no heading were found.
     if (!heading.length) {
-      console.log(
-        "Unfortunately, we couldn't find any heading, so we stopped building the toc."
-      );
+      console.error("Unfortunately, we couldn't find any heading.");
 
       delete e.toc;
 
       return;
     }
 
-    tocHandler({ ...options, headings: heading });
+    tocHandler({ ...options, headings: heading, headingSelectors });
 
     delete e.toc;
   };
@@ -230,14 +225,23 @@
     if (!tocEle) return;
 
     let options = null;
+    let optKeys = [
+      "content",
+      "headings",
+      "excludeHref",
+      "scroll",
+      "scrollOffset",
+      "smoothScroll",
+      "schema",
+    ];
 
     try {
-      // Convert tocEle dataset to an object if dataset exist.
-      options = JSON.parse(tocEle.dataset.toc.replace(/(\w+):/g, '"$1":'));
+      let dataToc = tocEle.dataset.toc;
+      // Convert tocEle dataset to an object.
+      optKeys.forEach((key) => (dataToc = dataToc.replace(key, `"${key}"`)));
+      options = JSON.parse(dataToc);
     } catch (err) {}
-
-    delete tocEle.dataset.toc;
 
     window.addEventListener("DOMContentLoaded", () => tocEle.toc(options));
   })();
-})(HTMLElement.prototype);
+})(Element.prototype);
